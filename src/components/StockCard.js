@@ -1,137 +1,190 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Dimensions,
+} from "react-native";
+import { ArrowUpRight } from "lucide-react-native";
 import { Colors, Shadows } from "../theme/colors";
 
-export default function StockCard({ item, onDelete }) {
-  const statusColors = {
-    in_stock: { bg: "#E1F5FE", text: "#039BE5" },
-    low: { bg: "#FFF3E0", text: "#F57C00" },
-    out_of_stock: { bg: "#FFEBEE", text: "#D32F2F" },
+const { width } = Dimensions.get("window");
+const CARD_WIDTH = (width - 60) / 2;
+
+export default function StockCard({ item, onDelete, onPress }) {
+  // Use brand logo as fallback if no image
+  const brandLogos = {
+    Apple: require("../../assets/logos/apple.png"),
+    Samsung: require("../../assets/logos/samsung.png"),
+    Google: require("../../assets/logos/google.png"),
+    Xiaomi: require("../../assets/logos/xiaomi.png"),
+    OnePlus: require("../../assets/logos/oneplus.png"),
+    Motorola: require("../../assets/logos/motorola.png"),
+    Vivo: require("../../assets/logos/vivo.png"),
+    Oppo: require("../../assets/logos/oppo.png"),
+    iQOO: require("../../assets/logos/iqoo.png"),
   };
-  const status = statusColors[item.status] || statusColors.in_stock;
+
+  const hasImage = item.image && item.image.url;
+  const logo = brandLogos[item.brand];
 
   return (
-    <View style={[styles.card, Shadows.card]}>
-      <View style={styles.content}>
-        <View style={styles.imageBox}>
-          <Text style={styles.emoji}>📱</Text>
-        </View>
-
-        <View style={styles.mainInfo}>
-          <View style={styles.topRow}>
-            <View>
-              <Text style={styles.model}>{item.model}</Text>
-              <Text style={styles.brand}>{item.brand}</Text>
-            </View>
-            <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-              <Text style={[styles.statusText, { color: status.text }]}>
-                {item.status.replace("_", " ").toUpperCase()}
-              </Text>
-            </View>
+    <TouchableOpacity
+      activeOpacity={0.9}
+      style={[styles.card, Shadows.card]}
+      onPress={() => onPress && onPress(item)}
+      onLongPress={() => onDelete && onDelete(item)}
+    >
+      {/* Image / Header Section */}
+      <View style={styles.imageContainer}>
+        {hasImage ? (
+          <Image
+            source={{ uri: item.image.url }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.fallbackContainer}>
+            {logo ? (
+              <Image source={logo} style={styles.logo} resizeMode="contain" />
+            ) : (
+              <Text style={styles.emoji}>📱</Text>
+            )}
           </View>
+        )}
 
-          <View style={styles.footer}>
-            <View style={styles.stats}>
-              <Text style={styles.statLabel}>Qty</Text>
-              <Text style={styles.statValue}>{item.quantity}</Text>
-            </View>
-            <View style={styles.stats}>
-              <Text style={styles.statLabel}>Price</Text>
-              <Text style={styles.statValue}>
-                ${(item.sellingPrice / 1000).toFixed(1)}k
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.delBtn}
-              onPress={() => onDelete && onDelete(item)}
-            >
-              <Text style={styles.delIcon}>🗑</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Stock Badge Overlay */}
+        <View
+          style={[
+            styles.stockBadge,
+            item.quantity <= 0 && styles.stockBadgeOut,
+          ]}
+        >
+          <Text
+            style={[
+              styles.stockText,
+              item.quantity <= 0 && styles.stockTextOut,
+            ]}
+          >
+            {item.quantity}
+          </Text>
         </View>
       </View>
-    </View>
+
+      {/* Info Section */}
+      <View style={styles.info}>
+        <View style={styles.textContainer}>
+          <Text style={styles.model} numberOfLines={1}>
+            {item.model}
+          </Text>
+          <Text style={styles.price}>
+            ₹{(item.sellingPrice / 1000).toFixed(1)}k
+          </Text>
+        </View>
+
+        {/* Action Button */}
+        <View style={styles.actionBtn}>
+          <ArrowUpRight size={20} color="#1A1A1A" />
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#FFF",
-    marginHorizontal: 20,
-    marginVertical: 8,
+    width: CARD_WIDTH,
+    borderRadius: 32,
+    padding: 12,
+    marginHorizontal: 8,
+    marginVertical: 10,
+  },
+  imageContainer: {
+    width: "100%",
+    height: 180,
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#F1F3F5",
+    backgroundColor: "#F8F9FA",
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
   },
-  content: {
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+  fallbackContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    opacity: 0.8,
+  },
+  emoji: {
+    fontSize: 50,
+  },
+  stockBadge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    backgroundColor: "#FFF",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  stockBadgeOut: {
+    backgroundColor: "#EF4444",
+  },
+  stockText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#1A1A1A",
+  },
+  stockTextOut: {
+    color: "#FFF",
+  },
+  info: {
     flexDirection: "row",
-    padding: 16,
-    gap: 15,
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    paddingHorizontal: 4,
   },
-  imageBox: {
-    width: 70,
-    height: 70,
-    borderRadius: 20,
+  textContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  model: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginBottom: 4,
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: Colors.warning, // Gold/Orange color from theme, matching shoe image
+  },
+  actionBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#F8F9FA",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  emoji: { fontSize: 32 },
-  mainInfo: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  model: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
-  brand: {
-    fontSize: 12,
-    color: "#999",
-    fontWeight: "500",
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusText: {
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  footer: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 20,
-  },
-  stats: {
-    gap: 2,
-  },
-  statLabel: {
-    fontSize: 10,
-    color: "#999",
-    fontWeight: "600",
-    textTransform: "uppercase",
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#333",
-  },
-  delBtn: {
-    marginLeft: "auto",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#FFF5F5",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  delIcon: { fontSize: 14, color: "#FF4D4D" },
 });

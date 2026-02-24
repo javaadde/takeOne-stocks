@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,11 @@ import {
   StatusBar,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Colors, Shadows } from "../theme/colors";
-import { analyticsData } from "../data/mockData";
+import { inventoryAPI } from "../services/api";
 import {
   TrendingUp,
   DollarSign,
@@ -19,7 +20,6 @@ import {
   ArrowDown,
   ArrowUp,
   RotateCcw,
-  X,
 } from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
@@ -31,8 +31,8 @@ function AnimatedNumber({ target, prefix = "", suffix = "", style }) {
   useEffect(() => {
     const num = parseFloat(String(target).replace(/[^0-9.]/g, ""));
     Animated.timing(animVal, {
-      toValue: num,
-      duration: 1400,
+      toValue: isNaN(num) ? 0 : num,
+      duration: 1000,
       useNativeDriver: false,
     }).start();
 
@@ -44,7 +44,7 @@ function AnimatedNumber({ target, prefix = "", suffix = "", style }) {
       );
     });
     return () => animVal.removeListener(id);
-  }, []);
+  }, [target]);
 
   return (
     <Text style={style}>
@@ -56,40 +56,46 @@ function AnimatedNumber({ target, prefix = "", suffix = "", style }) {
 }
 
 function LineGraph({ data, labels, color, height = 120 }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
+  if (!data || data.length === 0) return null;
+
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
   const range = max - min || 1;
   const pts = data.map((v, i) => ({
-    x: (i / (data.length - 1)) * (width - 70),
+    x:
+      data.length > 1
+        ? (i / (data.length - 1)) * (width - 70)
+        : (width - 70) / 2,
     y: height - ((v - min) / range) * (height - 30) - 10,
   }));
 
   return (
     <View style={{ height: height + 40, marginTop: 20 }}>
       <View style={styles.graphContainer}>
-        {pts.slice(0, -1).map((pt, i) => {
-          const next = pts[i + 1];
-          const dx = next.x - pt.x;
-          const dy = next.y - pt.y;
-          const len = Math.sqrt(dx * dx + dy * dy);
-          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-          return (
-            <View
-              key={i}
-              style={[
-                styles.graphLine,
-                {
-                  left: pt.x,
-                  top: pt.y,
-                  width: len,
-                  backgroundColor: color,
-                  transform: [{ rotate: `${angle}deg` }],
-                  transformOrigin: "0 0",
-                },
-              ]}
-            />
-          );
-        })}
+        {pts.length > 1 &&
+          pts.slice(0, -1).map((pt, i) => {
+            const next = pts[i + 1];
+            const dx = next.x - pt.x;
+            const dy = next.y - pt.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            return (
+              <View
+                key={i}
+                style={[
+                  styles.graphLine,
+                  {
+                    left: pt.x,
+                    top: pt.y,
+                    width: len,
+                    backgroundColor: color,
+                    transform: [{ rotate: `${angle}deg` }],
+                    transformOrigin: "0 0",
+                  },
+                ]}
+              />
+            );
+          })}
         {pts.map((pt, i) => (
           <View
             key={i}
@@ -117,10 +123,25 @@ function LineGraph({ data, labels, color, height = 120 }) {
 }
 
 export default function AnalyticsScreen() {
-  const [period, setPeriod] = useState("weekly");
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await inventoryAPI.getStats();
+      setStats(response.data);
+    } catch (error) {
+      console.warn("Analytics fetch error:", error.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
   useEffect(() => {
+    fetchStats();
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 600,
@@ -128,160 +149,174 @@ export default function AnalyticsScreen() {
     }).start();
   }, []);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchStats();
+  }, [fetchStats]);
+
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const chartData = stats?.monthlyTrends?.map((t) => t.count) || [0];
+  const chartLabels = stats?.monthlyTrends?.map(
+    (t) => monthNames[t._id - 1],
+  ) || ["Start"];
+
+  const sellingValue = stats?.totalSellingValue || 0;
+  const purchaseValue = stats?.totalPurchaseValue || 0;
+  const profit = sellingValue - purchaseValue;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <View style={styles.header}>
           <Text style={styles.title}>Analytics</Text>
           <Text style={styles.subtitle}>Track your performance</Text>
         </View>
 
-        {/* KPI Grid */}
-        <View style={styles.kpiGrid}>
-          <View style={[styles.kpiCard, Shadows.card]}>
-            <View style={[styles.kpiIconBox, { backgroundColor: "#EFF6FF" }]}>
-              <DollarSign size={20} color="#3B82F6" />
-            </View>
-            <AnimatedNumber
-              target={analyticsData.totalRevenue / 1000}
-              prefix="$"
-              suffix="k"
-              style={styles.kpiValue}
-            />
-            <Text style={styles.kpiLabel}>Revenue</Text>
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#1A1A1A" />
+            <Text style={styles.loadingText}>Loading analytics...</Text>
           </View>
-
-          <View style={[styles.kpiCard, Shadows.card]}>
-            <View style={[styles.kpiIconBox, { backgroundColor: "#F0FDF4" }]}>
-              <TrendingUp size={20} color="#10B981" />
-            </View>
-            <AnimatedNumber
-              target={analyticsData.totalProfit / 1000}
-              prefix="$"
-              suffix="k"
-              style={styles.kpiValue}
-            />
-            <Text style={styles.kpiLabel}>Net Profit</Text>
-          </View>
-        </View>
-
-        {/* Main Chart */}
-        <View style={[styles.graphCard, Shadows.card]}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Sales Velocity</Text>
-            <View style={styles.toggle}>
-              {["weekly", "monthly"].map((p) => (
-                <TouchableOpacity
-                  key={p}
-                  onPress={() => setPeriod(p)}
-                  style={[
-                    styles.toggleBtn,
-                    period === p && styles.toggleBtnActive,
-                  ]}
+        ) : (
+          <Animated.View style={{ opacity: fadeAnim }}>
+            {/* KPI Grid */}
+            <View style={styles.kpiGrid}>
+              <View style={[styles.kpiCard, Shadows.card]}>
+                <View
+                  style={[styles.kpiIconBox, { backgroundColor: "#EFF6FF" }]}
                 >
-                  <Text
-                    style={[
-                      styles.toggleText,
-                      period === p && styles.toggleTextActive,
-                    ]}
-                  >
-                    {p.charAt(0).toUpperCase() + p.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          <LineGraph
-            data={
-              period === "weekly"
-                ? analyticsData.weeklySales
-                : analyticsData.monthlyProfit.map((v) => v / 1000)
-            }
-            labels={
-              period === "weekly"
-                ? analyticsData.weeklyLabels
-                : analyticsData.monthlyLabels
-            }
-            color="#1A1A1A"
-          />
-        </View>
-
-        {/* Insight Row */}
-        <View style={styles.insightRow}>
-          <View style={[styles.miniInsight, Shadows.card]}>
-            <View style={styles.miniIconBox}>
-              <Target size={16} color="#333" />
-            </View>
-            <Text style={styles.miniTitle}>Growth</Text>
-            <Text style={styles.miniVal}>+{analyticsData.profitGrowth}%</Text>
-          </View>
-          <View style={[styles.miniInsight, Shadows.card]}>
-            <View style={styles.miniIconBox}>
-              <ArrowUp size={16} color="#10B981" />
-            </View>
-            <Text style={styles.miniTitle}>Top Brand</Text>
-            <Text style={styles.miniVal}>
-              {analyticsData.brandDistribution[0].brand}
-            </Text>
-          </View>
-        </View>
-
-        {/* Movement Section */}
-        <View style={[styles.movCard, Shadows.card]}>
-          <Text style={styles.cardTitle}>Stock Pulse</Text>
-          <View style={styles.movList}>
-            {[
-              {
-                label: "Received",
-                val: 47,
-                color: "#3B82F6",
-                icon: <ArrowDown size={14} color="#3B82F6" />,
-              },
-              {
-                label: "Sold",
-                val: 193,
-                color: "#1A1A1A",
-                icon: <ArrowUp size={14} color="#1A1A1A" />,
-              },
-              {
-                label: "Returns",
-                val: 3,
-                color: "#F59E0B",
-                icon: <RotateCcw size={14} color="#F59E0B" />,
-              },
-            ].map((row, i) => (
-              <View key={i} style={styles.movRow}>
-                <View style={styles.rowLead}>
-                  <View
-                    style={[
-                      styles.rowIcon,
-                      { backgroundColor: row.color + "15" },
-                    ]}
-                  >
-                    {row.icon}
-                  </View>
-                  <Text style={styles.rowLabel}>{row.label}</Text>
+                  <DollarSign size={20} color="#3B82F6" />
                 </View>
-                <View style={styles.barWrap}>
-                  <View
-                    style={[
-                      styles.barFill,
-                      {
-                        width: `${(row.val / 200) * 100}%`,
-                        backgroundColor: row.color,
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.rowVal}>{row.val}</Text>
+                <AnimatedNumber
+                  target={sellingValue / 1000}
+                  prefix="₹"
+                  suffix="k"
+                  style={styles.kpiValue}
+                />
+                <Text style={styles.kpiLabel}>Stock Value</Text>
               </View>
-            ))}
-          </View>
-        </View>
+
+              <View style={[styles.kpiCard, Shadows.card]}>
+                <View
+                  style={[styles.kpiIconBox, { backgroundColor: "#F0FDF4" }]}
+                >
+                  <TrendingUp size={20} color="#10B981" />
+                </View>
+                <AnimatedNumber
+                  target={profit / 1000}
+                  prefix="₹"
+                  suffix="k"
+                  style={styles.kpiValue}
+                />
+                <Text style={styles.kpiLabel}>Potential Profit</Text>
+              </View>
+            </View>
+
+            {/* Main Chart */}
+            <View style={[styles.graphCard, Shadows.card]}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Inventory Growth</Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>YTD</Text>
+                </View>
+              </View>
+              <LineGraph
+                data={chartData}
+                labels={chartLabels}
+                color="#1A1A1A"
+              />
+            </View>
+
+            {/* Insight Row */}
+            <View style={styles.insightRow}>
+              <View style={[styles.miniInsight, Shadows.card]}>
+                <View style={styles.miniIconBox}>
+                  <Target size={16} color="#333" />
+                </View>
+                <Text style={styles.miniTitle}>Total Items</Text>
+                <Text style={styles.miniVal}>{stats?.totalQuantity || 0}</Text>
+              </View>
+              <View style={[styles.miniInsight, Shadows.card]}>
+                <View style={styles.miniIconBox}>
+                  <ArrowUp size={16} color="#10B981" />
+                </View>
+                <Text style={styles.miniTitle}>Top Brand</Text>
+                <Text style={styles.miniVal}>
+                  {stats?.brandDistribution?.[0]?._id || "None"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Movement Section */}
+            <View style={[styles.movCard, Shadows.card]}>
+              <Text style={styles.cardTitle}>Stock Distribution</Text>
+              <View style={styles.movList}>
+                {stats?.statusDistribution?.map((status, i) => {
+                  const labels = {
+                    in_stock: "Available",
+                    low: "Low Stock",
+                    out_of_stock: "Out of Stock",
+                  };
+                  const colors = {
+                    in_stock: "#10B981",
+                    low: "#F59E0B",
+                    out_of_stock: "#EF4444",
+                  };
+                  return (
+                    <View key={i} style={styles.movRow}>
+                      <View style={styles.rowLead}>
+                        <View
+                          style={[
+                            styles.rowIcon,
+                            { backgroundColor: colors[status._id] + "15" },
+                          ]}
+                        >
+                          <ArrowDown size={14} color={colors[status._id]} />
+                        </View>
+                        <Text style={styles.rowLabel}>
+                          {labels[status._id] || status._id}
+                        </Text>
+                      </View>
+                      <View style={styles.barWrap}>
+                        <View
+                          style={[
+                            styles.barFill,
+                            {
+                              width: `${(status.totalQuantity / (stats.totalQuantity || 1)) * 100}%`,
+                              backgroundColor: colors[status._id],
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.rowVal}>{status.totalQuantity}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          </Animated.View>
+        )}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -295,6 +330,9 @@ const styles = StyleSheet.create({
   header: { marginBottom: 25 },
   title: { fontSize: 28, fontWeight: "800", color: "#1A1A1A" },
   subtitle: { fontSize: 14, color: "#9CA3AF", marginTop: 4, fontWeight: "500" },
+
+  loadingBox: { paddingVertical: 100, alignItems: "center", gap: 15 },
+  loadingText: { color: "#9CA3AF", fontWeight: "600" },
 
   kpiGrid: { flexDirection: "row", gap: 12, marginBottom: 20 },
   kpiCard: {
@@ -327,21 +365,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cardTitle: { fontSize: 18, fontWeight: "800", color: "#1A1A1A" },
-  toggle: {
-    flexDirection: "row",
+  badge: {
     backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    padding: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  toggleBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  toggleBtnActive: {
-    backgroundColor: "#FFF",
-    elevation: 2,
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  toggleText: { fontSize: 11, fontWeight: "600", color: "#9CA3AF" },
-  toggleTextActive: { color: "#1A1A1A" },
+  badgeText: { fontSize: 10, fontWeight: "800", color: "#6B7280" },
 
   graphContainer: { height: 120, width: "100%" },
   graphLine: { position: "absolute", height: 2, borderRadius: 1 },
@@ -377,13 +407,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  miniTitle: { fontSize: 11, color: "#9CA3AF", fontWeight: "600" },
+  miniTitle: { fontSize: 11, color: "#9CA3AF", fontWeight: "600", flex: 1 },
   miniVal: { fontSize: 14, fontWeight: "800", color: "#1A1A1A" },
 
   movCard: { backgroundColor: "#FFF", borderRadius: 28, padding: 20 },
   movList: { marginTop: 20, gap: 15 },
   movRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  rowLead: { flexDirection: "row", alignItems: "center", gap: 10, width: 85 },
+  rowLead: { flexDirection: "row", alignItems: "center", gap: 10, width: 90 },
   rowIcon: {
     width: 28,
     height: 28,

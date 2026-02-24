@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,70 +7,122 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
+  ActivityIndicator,
+  Linking,
 } from "react-native";
-import { Colors, Shadows } from "../theme/colors";
-
-function SettingItem({ icon, label, sub, rightLabel }) {
-  return (
-    <TouchableOpacity style={styles.item}>
-      <View style={styles.itemIconBox}>
-        <Text style={styles.itemEmoji}>{icon}</Text>
-      </View>
-      <View style={styles.itemContent}>
-        <Text style={styles.itemLabel}>{label}</Text>
-        {sub && <Text style={styles.itemSub}>{sub}</Text>}
-      </View>
-      {rightLabel && <Text style={styles.rightLabel}>{rightLabel}</Text>}
-      <Text style={styles.arrow}>›</Text>
-    </TouchableOpacity>
-  );
-}
+import { API_BASE_URL } from "../services/api";
+import { useRouter } from "expo-router";
+import { CreditCard, ChevronRight } from "lucide-react-native";
 
 export default function SettingsScreen() {
+  const router = useRouter();
+  const [serverStatus, setServerStatus] = useState("checking...");
+  const [loading, setLoading] = useState(false);
+
+  const checkConnectivity = async () => {
+    setLoading(true);
+    setServerStatus("checking...");
+    try {
+      const start = Date.now();
+      const response = await fetch(`${API_BASE_URL}/health`);
+      const end = Date.now();
+      if (response.ok) {
+        setServerStatus(`Online (${end - start}ms)`);
+      } else {
+        setServerStatus("Offline (Error)");
+      }
+    } catch (e) {
+      setServerStatus("Offline (No Connection)");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkConnectivity();
+  }, []);
+
+  const openPortfolio = () => {
+    Linking.openURL("https://javade.in");
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
-          <View style={styles.profileBox}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>JD</Text>
-            </View>
-            <View>
-              <Text style={styles.name}>John Doe</Text>
-              <Text style={styles.role}>Administrator</Text>
-            </View>
+          <View style={styles.businessLogoBox}>
+            <Image
+              source={require("../../assets/icon.png")}
+              style={styles.logo}
+            />
+            <Text style={styles.appName}>TakeOne Mobiles</Text>
+            <Text style={styles.appTagline}>Premium Mobile Store</Text>
           </View>
-          <TouchableOpacity style={styles.editBtn}>
-            <Text style={styles.editBtnText}>Edit Profile</Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>System Status</Text>
+          <View style={styles.card}>
+            <View style={styles.statusRow}>
+              <View style={styles.statusInfo}>
+                <Text style={styles.statusLabel}>Backend Server</Text>
+                <Text style={styles.urlText} numberOfLines={1}>
+                  {API_BASE_URL}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: serverStatus.includes("Online")
+                      ? "#10B981"
+                      : "#EF4444",
+                  },
+                ]}
+              >
+                <Text style={styles.badgeText}>{serverStatus}</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.refreshBtn}
+              onPress={checkConnectivity}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.refreshText}>Test Connection</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sales Records</Text>
+          <TouchableOpacity
+            style={styles.salesCard}
+            onPress={() => router.push("/sales-history")}
+          >
+            <View style={styles.salesIconBox}>
+              <CreditCard size={24} color="#1A1A1A" />
+            </View>
+            <View style={styles.salesContent}>
+              <Text style={styles.salesTitle}>Sales History</Text>
+              <Text style={styles.salesSub}>
+                View all past sales and customer details
+              </Text>
+            </View>
+            <ChevronRight size={20} color="#999" />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Application</Text>
-          <View style={styles.card}>
-            <SettingItem icon="🌓" label="Appearance" rightLabel="Light Mode" />
-            <SettingItem icon="🔔" label="Notifications" sub="Push & Email" />
-            <SettingItem icon="🔒" label="Privacy & Security" />
-          </View>
+        <View style={styles.footer}>
+          <Text style={styles.madeBy}>Made by @javaadde</Text>
+          <TouchableOpacity style={styles.knowMoreBtn} onPress={openPortfolio}>
+            <Text style={styles.knowMoreText}>Know more about javad</Text>
+          </TouchableOpacity>
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Management</Text>
-          <View style={styles.card}>
-            <SettingItem icon="💰" label="Currency" rightLabel="USD ($)" />
-            <SettingItem
-              icon="☁️"
-              label="Cloud Backup"
-              sub="Last synced: 2h ago"
-            />
-            <SettingItem icon="👥" label="Staff Permissions" />
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -84,53 +136,34 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
   },
   scroll: {
-    paddingTop: 60,
+    paddingTop: 80,
     paddingHorizontal: 20,
   },
   header: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 40,
+    marginBottom: 50,
   },
-  profileBox: {
-    flexDirection: "row",
+  businessLogoBox: {
     alignItems: "center",
-    gap: 15,
+    gap: 8,
   },
-  avatar: {
-    width: 60,
-    height: 60,
+  logo: {
+    width: 120,
+    height: 120,
     borderRadius: 30,
-    backgroundColor: "#1A1A1A",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    color: "#FFF",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#1A1A1A",
-  },
-  role: {
-    fontSize: 13,
-    color: "#999",
-    fontWeight: "500",
-  },
-  editBtn: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 12,
     backgroundColor: "#F3F4F6",
+    marginBottom: 10,
   },
-  editBtnText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#333",
+  appName: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#1A1A1A",
+    letterSpacing: -0.5,
+  },
+  appTagline: {
+    fontSize: 14,
+    color: "#999",
+    fontWeight: "600",
   },
   section: {
     marginBottom: 25,
@@ -142,66 +175,125 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
     marginLeft: 5,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   card: {
     backgroundColor: "#FFF",
-    borderRadius: 24,
+    borderRadius: 30,
     borderWidth: 1,
     borderColor: "#F3F4F6",
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  item: {
+  statusRow: {
+    padding: 24,
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    justifyContent: "space-between",
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  itemIconBox: {
-    width: 40,
-    height: 40,
+  statusInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  statusLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#999",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  urlText: {
+    fontSize: 13,
+    color: "#333",
+    fontWeight: "600",
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: "#F8F9FA",
+  },
+  badgeText: {
+    color: "#FFF",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  refreshBtn: {
+    margin: 16,
+    height: 55,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  refreshText: {
+    color: "#FFF",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  footer: {
+    marginTop: 60,
+    alignItems: "center",
+  },
+  madeBy: {
+    fontSize: 14,
+    color: "#999",
+    fontWeight: "600",
+    marginBottom: 16,
+  },
+  knowMoreBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 20,
+    backgroundColor: "#F3F4F6",
+    width: "100%",
+    alignItems: "center",
+  },
+  knowMoreText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1A1A1A",
+  },
+  salesCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 30,
+    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  salesIconBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 15,
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 15,
   },
-  itemEmoji: { fontSize: 18 },
-  itemContent: {
+  salesContent: {
     flex: 1,
   },
-  itemLabel: {
-    fontSize: 15,
-    fontWeight: "600",
+  salesTitle: {
+    fontSize: 16,
+    fontWeight: "700",
     color: "#1A1A1A",
+    marginBottom: 2,
   },
-  itemSub: {
+  salesSub: {
     fontSize: 12,
     color: "#999",
-    marginTop: 2,
-  },
-  rightLabel: {
-    fontSize: 13,
-    color: "#666",
-    marginRight: 10,
     fontWeight: "500",
-  },
-  arrow: {
-    fontSize: 20,
-    color: "#CCC",
-  },
-  logoutBtn: {
-    marginTop: 10,
-    height: 55,
-    borderRadius: 18,
-    backgroundColor: "#FFF5F5",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoutText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#FF4D4C",
   },
 });
