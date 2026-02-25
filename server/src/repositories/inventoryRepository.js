@@ -200,6 +200,28 @@ class InventoryRepository {
   }
 
   /**
+   * Archive an item
+   */
+  async archive(id) {
+    return await InventoryItem.findByIdAndUpdate(
+      id,
+      { isArchived: true },
+      { new: true },
+    );
+  }
+
+  /**
+   * Unarchive an item
+   */
+  async unarchive(id) {
+    return await InventoryItem.findByIdAndUpdate(
+      id,
+      { isArchived: false },
+      { new: true },
+    );
+  }
+
+  /**
    * Find an item by brand and model
    */
   async findByBrandAndModel(brand, model) {
@@ -214,6 +236,12 @@ class InventoryRepository {
    */
   _buildQuery(filters) {
     const query = {};
+
+    // Default to non-archived unless explicitly requested
+    query.isArchived =
+      filters.isArchived === "true" || filters.isArchived === true
+        ? true
+        : false;
 
     if (filters.brand && filters.brand !== "All") {
       query.brand = filters.brand;

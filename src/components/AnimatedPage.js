@@ -20,20 +20,24 @@ export default function AnimatedPage({ children }) {
 
   const offset = useSharedValue(0);
   const opacity = useSharedValue(1);
-  const scale = useSharedValue(1);
 
   useEffect(() => {
     const isMovingRight = currentIndex > prevIndex.current;
 
-    // Fluid Reset
-    offset.value = isMovingRight ? 30 : -30;
-    opacity.value = 0.4;
-    scale.value = 0.96;
+    // Slide Reset: Position off-screen based on direction
+    offset.value = isMovingRight ? width : -width;
+    opacity.value = 0.8; // Maintain visibility but slightly dimmed during transition
 
-    // Smooth entry
-    offset.value = withSpring(0, { damping: 20, stiffness: 100 });
-    opacity.value = withTiming(1, { duration: 400 });
-    scale.value = withSpring(1, { damping: 18, stiffness: 100 });
+    // Smooth horizontal slide arrival
+    offset.value = withSpring(0, {
+      damping: 26,
+      stiffness: 150,
+      mass: 1,
+      restDisplacementThreshold: 0.01,
+      restSpeedThreshold: 0.01,
+    });
+
+    opacity.value = withTiming(1, { duration: 300 });
 
     prevIndex.current = currentIndex;
   }, [pathname]);
@@ -42,7 +46,7 @@ export default function AnimatedPage({ children }) {
     return {
       flex: 1,
       opacity: opacity.value,
-      transform: [{ translateX: offset.value }, { scale: scale.value }],
+      transform: [{ translateX: offset.value }],
     };
   });
 

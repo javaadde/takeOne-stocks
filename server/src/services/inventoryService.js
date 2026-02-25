@@ -228,6 +228,24 @@ class InventoryService {
     }
     return await inventoryRepository.restock(id, quantityToAdd);
   }
+
+  /**
+   * Archive an item
+   */
+  async archiveItem(id) {
+    const item = await inventoryRepository.findById(id);
+    if (!item) throw new Error("Item not found");
+    return await inventoryRepository.archive(id);
+  }
+
+  /**
+   * Unarchive an item
+   */
+  async unarchiveItem(id) {
+    const item = await inventoryRepository.findById(id);
+    if (!item) throw new Error("Item not found");
+    return await inventoryRepository.unarchive(id);
+  }
 }
 
 module.exports = new InventoryService();

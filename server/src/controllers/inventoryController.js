@@ -255,6 +255,48 @@ class InventoryController {
       });
     }
   }
+
+  /**
+   * PATCH /api/inventory/:id/archive
+   * Archive an item
+   */
+  async archive(req, res) {
+    try {
+      const item = await inventoryService.archiveItem(req.params.id);
+      res.status(200).json({
+        success: true,
+        message: "Item archived successfully",
+        data: item,
+      });
+    } catch (error) {
+      const statusCode = error.message === "Item not found" ? 404 : 400;
+      res.status(statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * PATCH /api/inventory/:id/unarchive
+   * Unarchive an item
+   */
+  async unarchive(req, res) {
+    try {
+      const item = await inventoryService.unarchiveItem(req.params.id);
+      res.status(200).json({
+        success: true,
+        message: "Item unarchived successfully",
+        data: item,
+      });
+    } catch (error) {
+      const statusCode = error.message === "Item not found" ? 404 : 400;
+      res.status(statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
 }
 
 module.exports = new InventoryController();

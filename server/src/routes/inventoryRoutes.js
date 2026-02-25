@@ -24,5 +24,7 @@ router.post(
   inventoryController.sell,
 );
 router.post("/:id/restock", inventoryController.restock);
+router.patch("/:id/archive", inventoryController.archive);
+router.patch("/:id/unarchive", inventoryController.unarchive);
 
 module.exports = router;

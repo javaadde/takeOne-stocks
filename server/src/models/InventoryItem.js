@@ -85,6 +85,10 @@ const inventoryItemSchema = new mongoose.Schema(
         default: null,
       },
     },
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

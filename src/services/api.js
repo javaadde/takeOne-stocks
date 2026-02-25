@@ -231,6 +231,18 @@ export const inventoryAPI = {
       body: JSON.stringify({ quantityToAdd }),
     });
   },
+  /**
+   * Archive an item
+   */
+  archive: async (id) => {
+    return apiRequest(`/inventory/${id}/archive`, { method: "PATCH" });
+  },
+  /**
+   * Unarchive an item
+   */
+  unarchive: async (id) => {
+    return apiRequest(`/inventory/${id}/unarchive`, { method: "PATCH" });
+  },
 };
 
 // ========================
