@@ -1,2 +1,10 @@
 import AddStockScreen from "../../src/screens/AddStockScreen";
-export default AddStockScreen;
+import AnimatedPage from "../../src/components/AnimatedPage";
+
+export default function AddRoute() {
+  return (
+    <AnimatedPage>
+      <AddStockScreen />
+    </AnimatedPage>
+  );
+}

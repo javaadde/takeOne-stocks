@@ -25,6 +25,7 @@ export default function StockCard({ item, onDelete, onPress }) {
     Vivo: require("../../assets/logos/vivo.png"),
     Oppo: require("../../assets/logos/oppo.png"),
     iQOO: require("../../assets/logos/iqoo.png"),
+    Realme: require("../../assets/logos/realme.png"),
   };
 
   const hasImage = item.image && item.image.url;

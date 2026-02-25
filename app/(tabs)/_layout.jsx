@@ -10,7 +10,7 @@ import {
   LayoutDashboard,
   Package,
   Plus,
-  BarChart2,
+  History,
   User,
 } from "lucide-react-native";
 import Animated, {
@@ -110,7 +110,7 @@ export default function TabLayout() {
       tabBar={(props) => <MyTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        animation: "fade", // Simpler animation for better stability
+        animation: "none",
       }}
     >
       <Tabs.Screen
@@ -142,14 +142,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="analytics"
+        name="history"
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <BarChart2
-              size={22}
-              color={color}
-              strokeWidth={focused ? 2.5 : 2}
-            />
+            <History size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />

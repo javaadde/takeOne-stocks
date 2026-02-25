@@ -34,6 +34,7 @@ const brandLogos = {
   Vivo: require("../../assets/logos/vivo.png"),
   Oppo: require("../../assets/logos/oppo.png"),
   iQOO: require("../../assets/logos/iqoo.png"),
+  Realme: require("../../assets/logos/realme.png"),
 };
 
 const brandColors = {
@@ -46,6 +47,7 @@ const brandColors = {
   Vivo: "#FFFFFF",
   Oppo: "#FFFFFF",
   iQOO: "#FFFFFF",
+  Realme: "#FFFFFF",
   All: "#F3F4F6",
 };
 
@@ -208,6 +210,12 @@ export default function StocksScreen() {
       color: brandColors.Motorola,
     },
     { id: "9", label: "iQOO", logo: brandLogos.iQOO, color: brandColors.iQOO },
+    {
+      id: "10",
+      label: "Realme",
+      logo: brandLogos.Realme,
+      color: brandColors.Realme,
+    },
   ];
 
   return (

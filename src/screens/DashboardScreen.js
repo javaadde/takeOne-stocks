@@ -36,6 +36,7 @@ const BRAND_LOGOS = {
   Vivo: require("../../assets/logos/vivo.png"),
   IQOO: require("../../assets/logos/iqoo.png"),
   Motorola: require("../../assets/logos/motorola.png"),
+  Realme: require("../../assets/logos/realme.png"),
 };
 
 const getBrandLogo = (brandName) => {
@@ -53,6 +54,7 @@ const getBrandLogo = (brandName) => {
   if (name.includes("iqoo")) return BRAND_LOGOS.IQOO;
   if (name.includes("motorola") || name.includes("moto"))
     return BRAND_LOGOS.Motorola;
+  if (name.includes("realme")) return BRAND_LOGOS.Realme;
   return null;
 };
 

@@ -102,7 +102,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Sales Records</Text>
           <TouchableOpacity
             style={styles.salesCard}
-            onPress={() => router.push("/sales-history")}
+            onPress={() => router.push("/(tabs)/history")}
           >
             <View style={styles.salesIconBox}>
               <CreditCard size={24} color="#1A1A1A" />

@@ -64,6 +64,7 @@ const BRANDS = [
   { name: "Oppo", logo: require("../../assets/logos/oppo.png") },
   { name: "Motorola", logo: require("../../assets/logos/motorola.png") },
   { name: "iQOO", logo: require("../../assets/logos/iqoo.png") },
+  { name: "Realme", logo: require("../../assets/logos/realme.png") },
 ];
 
 export default function AddStockScreen() {
