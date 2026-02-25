@@ -28,7 +28,9 @@ import {
   X,
   Plus,
   ImagePlus,
+  Check,
 } from "lucide-react-native";
+import { Audio } from "expo-av";
 
 function InputField({
   label,
@@ -74,6 +76,7 @@ export default function AddStockScreen() {
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const successAnim = useRef(new Animated.Value(0)).current;
 
   // Form state
@@ -226,6 +229,7 @@ export default function AddStockScreen() {
     }
 
     setLoading(true);
+    setIsSuccess(false);
 
     try {
       const itemData = {
@@ -247,6 +251,19 @@ export default function AddStockScreen() {
         await inventoryAPI.create(itemData, imageUri);
       }
 
+      setLoading(false);
+      setIsSuccess(true);
+
+      // Play success sound
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          require("../../assets/sounds/success.mp3"),
+        );
+        await sound.playAsync();
+      } catch (soundError) {
+        console.log("Error playing sound", soundError);
+      }
+
       // Show success animation
       Animated.timing(successAnim, {
         toValue: 1,
@@ -264,9 +281,17 @@ export default function AddStockScreen() {
             router.back();
           } else {
             resetForm();
+            setIsSuccess(false);
           }
         }, 1200);
       });
+
+      if (isEditing) {
+        // If editing, we might want to wait for the animation to finish before navigating back
+        // but the setLoading(false) should happen inside finally if we want the loading screen to stay
+      } else {
+        // For new items, we keep loading true until success animation is nearly done
+      }
     } catch (error) {
       if (
         error.message === "Item already exists in inventory" &&
@@ -291,7 +316,9 @@ export default function AddStockScreen() {
         Alert.alert("Error", error.message || "Failed to save item.");
       }
     } finally {
-      setLoading(false);
+      if (!isSuccess) {
+        setLoading(false);
+      }
     }
   };
 
@@ -663,29 +690,56 @@ export default function AddStockScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Success Animation Overlay */}
-      <Animated.View
-        style={[
-          styles.successOverlay,
-          {
-            opacity: successAnim,
-            transform: [
-              {
-                scale: successAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-        pointerEvents="none"
-      >
-        <View style={styles.successCircle}>
-          <Text style={styles.checkIcon}>✓</Text>
+      {/* Full Screen Loading Overlay */}
+      <Modal visible={loading} transparent={true} animationType="fade">
+        <View style={styles.loadingOverlay}>
+          <LinearGradient
+            colors={["rgba(0,0,0,0.7)", "rgba(0,0,0,0.85)"]}
+            style={styles.loadingOverlayGradient}
+          >
+            <View style={styles.loadingContent}>
+              <ActivityIndicator size="large" color="#FFF" />
+              <Text style={styles.loadingOverlayText}>
+                {isEditing ? "Updating Inventory..." : "Adding to Inventory..."}
+              </Text>
+            </View>
+          </LinearGradient>
         </View>
-        <Text style={styles.successText}>Item Saved!</Text>
-      </Animated.View>
+      </Modal>
+
+      {/* Success Animation Overlay */}
+      <Modal visible={isSuccess} transparent={true} animationType="none">
+        <Animated.View
+          style={[
+            styles.successOverlay,
+            {
+              opacity: successAnim,
+              transform: [
+                {
+                  scale: successAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <LinearGradient
+            colors={["#10B981", "#059669"]}
+            style={styles.successCircle}
+          >
+            <Check size={50} color="#FFF" strokeWidth={4} />
+          </LinearGradient>
+          <Text style={styles.successTitleText}>Success!</Text>
+          <Text style={styles.successSubtitleText}>
+            {isEditing
+              ? "Item updated successfully"
+              : "New item added to inventory"}
+          </Text>
+        </Animated.View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -872,32 +926,56 @@ const styles = StyleSheet.create({
     color: "#999",
     fontWeight: "600",
   },
+  // Loading Overlay
+  loadingOverlay: {
+    flex: 1,
+  },
+  loadingOverlayGradient: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingContent: {
+    alignItems: "center",
+    gap: 15,
+  },
+  loadingOverlayText: {
+    color: "#FFF",
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
   // Success Overlay
   successOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255,255,255,0.95)",
+    backgroundColor: "rgba(255,255,255,1)",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 100,
+    zIndex: 1000,
   },
   successCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#10B981",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
+    marginBottom: 24,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  checkIcon: {
-    color: "#FFF",
-    fontSize: 50,
-    fontWeight: "bold",
+  successTitleText: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#111827",
+    marginBottom: 8,
   },
-  successText: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#1A1A1A",
+  successSubtitleText: {
+    fontSize: 16,
+    color: "#6B7280",
+    fontWeight: "600",
   },
   // Dropdown Styles
   dropdownTrigger: {

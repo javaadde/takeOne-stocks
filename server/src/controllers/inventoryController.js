@@ -40,9 +40,24 @@ class InventoryController {
         search,
         minPrice,
         maxPrice,
+        isArchived,
       } = req.query;
 
-      const filters = { brand, status, search, minPrice, maxPrice };
+      console.log("DEBUG: Inventory getAll filters:", {
+        brand,
+        status,
+        search,
+        isArchived,
+      });
+
+      const filters = {
+        brand,
+        status,
+        search,
+        minPrice,
+        maxPrice,
+        isArchived,
+      };
       const options = { page, limit, sortBy, sortOrder };
 
       const result = await inventoryService.getAllItems(filters, options);
