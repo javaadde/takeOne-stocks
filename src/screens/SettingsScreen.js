@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { API_BASE_URL } from "../services/api";
 import { useRouter } from "expo-router";
-import { CreditCard, ChevronRight } from "lucide-react-native";
+import { CreditCard, ChevronRight, Archive } from "lucide-react-native";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -99,7 +99,7 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sales Records</Text>
+          <Text style={styles.sectionTitle}>Inventory Management</Text>
           <TouchableOpacity
             style={styles.salesCard}
             onPress={() => router.push("/(tabs)/history")}
@@ -111,6 +111,22 @@ export default function SettingsScreen() {
               <Text style={styles.salesTitle}>Sales History</Text>
               <Text style={styles.salesSub}>
                 View all past sales and customer details
+              </Text>
+            </View>
+            <ChevronRight size={20} color="#999" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.salesCard, { marginTop: 12 }]}
+            onPress={() => router.push("/archived-stocks")}
+          >
+            <View style={[styles.salesIconBox, { backgroundColor: "#EEF2FF" }]}>
+              <Archive size={24} color="#6366F1" />
+            </View>
+            <View style={styles.salesContent}>
+              <Text style={styles.salesTitle}>Archived Stocks</Text>
+              <Text style={styles.salesSub}>
+                Restore or delete previously archived items
               </Text>
             </View>
             <ChevronRight size={20} color="#999" />
