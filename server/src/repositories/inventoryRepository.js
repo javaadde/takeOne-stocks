@@ -237,10 +237,13 @@ class InventoryRepository {
   _buildQuery(filters) {
     const query = {};
 
-    // Default to non-archived unless explicitly requested
-    if (filters.isArchived === "true" || filters.isArchived === true) {
+    // Archiving filter logic
+    if (filters.isArchived === true) {
       query.isArchived = true;
+    } else if (filters.isArchived === false) {
+      query.isArchived = { $ne: true };
     } else {
+      // Default behavior: show only non-archived items
       query.isArchived = { $ne: true };
     }
 

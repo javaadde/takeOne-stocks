@@ -43,20 +43,18 @@ class InventoryController {
         isArchived,
       } = req.query;
 
-      console.log("DEBUG: Inventory getAll filters:", {
-        brand,
-        status,
-        search,
-        isArchived,
-      });
-
       const filters = {
         brand,
         status,
         search,
         minPrice,
         maxPrice,
-        isArchived,
+        isArchived:
+          isArchived === "true"
+            ? true
+            : isArchived === "false"
+              ? false
+              : isArchived,
       };
       const options = { page, limit, sortBy, sortOrder };
 

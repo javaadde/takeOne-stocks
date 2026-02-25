@@ -10,17 +10,32 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { ChevronLeft, RotateCcw, Trash2, Package } from "lucide-react-native";
+import {
+  ChevronLeft,
+  RotateCcw,
+  Trash2,
+  Package,
+  X,
+} from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { inventoryAPI } from "../services/api";
-import { Colors, Shadows } from "../theme/colors";
+import { Shadows } from "../theme/colors";
 
 export default function ArchivedStocksScreen() {
   const router = useRouter();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmQty, setDeleteConfirmQty] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
 
   const fetchArchivedItems = useCallback(async () => {
     try {
@@ -68,26 +83,29 @@ export default function ArchivedStocksScreen() {
     );
   };
 
-  const handleDelete = (item) => {
-    Alert.alert(
-      "Permanently Delete",
-      `This will permanently remove "${item.brand} ${item.model}". This action cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await inventoryAPI.delete(item._id);
-              setItems((prev) => prev.filter((i) => i._id !== item._id));
-            } catch (error) {
-              Alert.alert("Error", error.message);
-            }
-          },
-        },
-      ],
-    );
+  const handleDelete = async () => {
+    if (!selectedItem) return;
+
+    if (Number(deleteConfirmQty) !== selectedItem.quantity) {
+      Alert.alert(
+        "Verification Failed",
+        `Please enter the exact current quantity (${selectedItem.quantity}) to confirm deletion.`,
+      );
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await inventoryAPI.delete(selectedItem._id);
+      setItems((prev) => prev.filter((i) => i._id !== selectedItem._id));
+      setShowDeleteModal(false);
+      setDeleteConfirmQty("");
+      Alert.alert("Success", "Item deleted permanently");
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -158,7 +176,11 @@ export default function ArchivedStocksScreen() {
 
                   <TouchableOpacity
                     style={[styles.actionBtn, styles.deleteBtn]}
-                    onPress={() => handleDelete(item)}
+                    onPress={() => {
+                      setSelectedItem(item);
+                      setDeleteConfirmQty("");
+                      setShowDeleteModal(true);
+                    }}
                   >
                     <Trash2 size={18} color="#EF4444" />
                     <Text style={[styles.actionText, { color: "#EF4444" }]}>
@@ -172,6 +194,80 @@ export default function ArchivedStocksScreen() {
         )}
         <View style={{ height: 50 }} />
       </ScrollView>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.restockDialog}>
+            <View style={styles.dialogHeader}>
+              <View>
+                <Text style={[styles.dialogTitle, { color: "#EF4444" }]}>
+                  Confirm Deletion
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowDeleteModal(false)}>
+                <X size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.dialogBody}>
+              {selectedItem && (
+                <>
+                  <Text style={styles.dialogSub}>
+                    To delete{" "}
+                    <Text style={{ fontWeight: "800", color: "#111827" }}>
+                      {selectedItem.brand} {selectedItem.model}
+                    </Text>{" "}
+                    permanently, please type the current stock quantity:
+                  </Text>
+
+                  <View style={styles.confirmTarget}>
+                    <Text style={styles.confirmTargetText}>
+                      {selectedItem.quantity}
+                    </Text>
+                  </View>
+
+                  <TextInput
+                    style={styles.restockInput}
+                    placeholder="Type quantity here..."
+                    keyboardType="numeric"
+                    value={deleteConfirmQty}
+                    onChangeText={setDeleteConfirmQty}
+                    autoFocus={true}
+                  />
+
+                  <TouchableOpacity
+                    style={styles.dialogBtn}
+                    onPress={handleDelete}
+                    disabled={isDeleting}
+                  >
+                    <LinearGradient
+                      colors={["#EF4444", "#DC2626"]}
+                      style={styles.dialogBtnGrad}
+                    >
+                      {isDeleting ? (
+                        <ActivityIndicator color="#FFF" size="small" />
+                      ) : (
+                        <Text style={styles.dialogBtnText}>
+                          Permanently Delete
+                        </Text>
+                      )}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -320,5 +416,77 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 14,
     fontWeight: "700",
+  },
+  // Modal Styles (matching SellScreen)
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  restockDialog: {
+    backgroundColor: "#FFF",
+    borderRadius: 28,
+    padding: 24,
+  },
+  dialogHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  dialogTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  dialogBody: {
+    gap: 15,
+  },
+  dialogSub: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  confirmTarget: {
+    backgroundColor: "#F9FAFB",
+    paddingVertical: 12,
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    marginVertical: 5,
+  },
+  confirmTargetText: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#EF4444",
+    letterSpacing: 2,
+  },
+  restockInput: {
+    backgroundColor: "#F9FAFB",
+    height: 60,
+    borderRadius: 18,
+    paddingHorizontal: 20,
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+  },
+  dialogBtn: {
+    marginTop: 10,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+  dialogBtnGrad: {
+    height: 55,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dialogBtnText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
   },
 });
