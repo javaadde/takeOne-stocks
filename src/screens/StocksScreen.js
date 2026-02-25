@@ -16,7 +16,7 @@ import {
   Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Search, Filter, Smartphone, PackageOpen } from "lucide-react-native";
 import { Colors, Shadows } from "../theme/colors";
 import { inventoryAPI } from "../services/api";
@@ -134,10 +134,11 @@ export default function StocksScreen() {
     }
   }, [selectedBrand, search, filterStatus, sortBy]);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchItems();
-  }, [fetchItems]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchItems();
+    }, [fetchItems]),
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

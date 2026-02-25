@@ -238,10 +238,11 @@ class InventoryRepository {
     const query = {};
 
     // Default to non-archived unless explicitly requested
-    query.isArchived =
-      filters.isArchived === "true" || filters.isArchived === true
-        ? true
-        : false;
+    if (filters.isArchived === "true" || filters.isArchived === true) {
+      query.isArchived = true;
+    } else {
+      query.isArchived = { $ne: true };
+    }
 
     if (filters.brand && filters.brand !== "All") {
       query.brand = filters.brand;

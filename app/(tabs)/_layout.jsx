@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import React, { useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   Platform,
   Dimensions,
 } from "react-native";
+import { Tabs } from "expo-router";
 import {
   LayoutDashboard,
   Package,
@@ -18,7 +19,7 @@ import Animated, {
   withSpring,
   useSharedValue,
 } from "react-native-reanimated";
-import React, { useEffect } from "react";
+import SwipeWrapper from "../../src/components/SwipeWrapper";
 
 const { width } = Dimensions.get("window");
 const TAB_BAR_HORIZONTAL_MARGIN = 20;
@@ -106,58 +107,68 @@ function MyTabBar({ state, descriptors, navigation }) {
 
 export default function TabLayout() {
   return (
-    <Tabs
-      tabBar={(props) => <MyTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-        animation: "none",
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <LayoutDashboard
-              size={22}
-              color={color}
-              strokeWidth={focused ? 2.5 : 2}
-            />
-          ),
+    <SwipeWrapper>
+      <Tabs
+        tabBar={(props) => <MyTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+          animation: "none",
         }}
-      />
-      <Tabs.Screen
-        name="stocks"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Package size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="add"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Plus size={28} color={color} strokeWidth={focused ? 3 : 2} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <History size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <User size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
-          ),
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <LayoutDashboard
+                size={22}
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="stocks"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <Package
+                size={22}
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="add"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <Plus size={28} color={color} strokeWidth={focused ? 3 : 2} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="history"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <History
+                size={22}
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <User size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
+            ),
+          }}
+        />
+      </Tabs>
+    </SwipeWrapper>
   );
 }
 
